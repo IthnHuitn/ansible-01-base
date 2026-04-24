@@ -1,0 +1,132 @@
+---
+- name: Install Clickhouse
+  hosts: clickhouse
+  become: true
+  handlers:
+    - name: Start clickhouse service
+      ansible.builtin.systemd:
+        name: clickhouse-server
+        state: restarted
+        daemon_reload: true
+  tasks:
+    - name: Install dependencies
+      ansible.builtin.dnf:
+        name:
+          - wget
+        state: present
+
+    - name: Download ClickHouse RPMs
+      ansible.builtin.shell: |
+        cd /tmp
+        wget -q https://packages.clickhouse.com/rpm/lts/clickhouse-common-static-{{ clickhouse_version }}.x86_64.rpm
+        wget -q https://packages.clickhouse.com/rpm/lts/clickhouse-client-{{ clickhouse_version }}.x86_64.rpm
+        wget -q https://packages.clickhouse.com/rpm/lts/clickhouse-server-{{ clickhouse_version }}.x86_64.rpm
+      args:
+        creates: /tmp/clickhouse-server-{{ clickhouse_version }}.x86_64.rpm
+
+    - name: Install clickhouse RPMs
+      ansible.builtin.dnf:
+        name:
+          - /tmp/clickhouse-common-static-{{ clickhouse_version }}.x86_64.rpm
+          - /tmp/clickhouse-client-{{ clickhouse_version }}.x86_64.rpm
+          - /tmp/clickhouse-server-{{ clickhouse_version }}.x86_64.rpm
+        state: present
+        disable_gpg_check: true
+      notify: Start clickhouse service
+
+    - name: Flush handlers
+      ansible.builtin.meta: flush_handlers
+
+    - name: Wait for ClickHouse to start
+      ansible.builtin.wait_for:
+        port: 9000
+        host: localhost
+        delay: 5
+        timeout: 30
+
+    - name: Check if logs database exists
+      ansible.builtin.command: "clickhouse-client -q 'EXISTS DATABASE logs;'"
+      register: db_exists
+      changed_when: false
+      failed_when: false
+
+    - name: Create logs database in ClickHouse
+      ansible.builtin.command: "clickhouse-client -q 'create database logs;'"
+      register: create_db
+      failed_when: create_db.rc != 0 and create_db.rc != 82
+      changed_when: create_db.rc == 0
+      when: db_exists.stdout == "0"
+
+- name: Install Vector
+  hosts: vector
+  become: true
+  handlers:
+    - name: Restart vector service
+      ansible.builtin.systemd:
+        name: vector
+        state: restarted
+        daemon_reload: true
+  tasks:
+    - name: Create vector directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - "{{ vector_install_dir }}/bin"
+        - "{{ vector_config_dir }}"
+        - "{{ vector_data_dir }}"
+
+    - name: Download Vector distribution
+      ansible.builtin.get_url:
+        url: "https://packages.timber.io/vector/{{ vector_version }}/vector-{{ vector_version }}-{{ ansible_architecture }}-unknown-linux-gnu.tar.gz"
+        dest: "/tmp/vector-{{ vector_version }}.tar.gz"
+        mode: '0644'
+
+    - name: Extract Vector archive
+      ansible.builtin.unarchive:
+        src: "/tmp/vector-{{ vector_version }}.tar.gz"
+        dest: /tmp/
+        remote_src: true
+
+    - name: Find vector binary
+      ansible.builtin.find:
+        paths: /tmp/
+        patterns: "vector"
+        file_type: file
+        recurse: true
+      register: vector_bin_found
+
+    - name: Copy vector binary to install dir
+      ansible.builtin.copy:
+        src: "{{ vector_bin_found.files[0].path }}"
+        dest: "{{ vector_install_dir }}/bin/vector"
+        mode: '0755'
+        remote_src: true
+
+    - name: Create symbolic link for convenience
+      ansible.builtin.file:
+        src: "{{ vector_install_dir }}/bin/vector"
+        dest: "/usr/local/bin/vector"
+        state: link
+        force: true
+
+    - name: Deploy Vector configuration
+      ansible.builtin.template:
+        src: vector.yml.j2
+        dest: "{{ vector_config_dir }}/vector.yml"
+        mode: '0644'
+      notify: Restart vector service
+
+    - name: Create Vector systemd service file
+      ansible.builtin.template:
+        src: vector.service.j2
+        dest: /etc/systemd/system/vector.service
+        mode: '0644'
+      notify: Restart vector service
+
+    - name: Start and enable Vector service
+      ansible.builtin.systemd:
+        name: vector
+        state: started
+        enabled: true

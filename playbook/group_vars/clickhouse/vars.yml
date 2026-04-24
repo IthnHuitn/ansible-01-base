@@ -1,0 +1,3 @@
+---
+clickhouse_version: "26.3.9.8"
+clickhouse_internal_ip: "${clickhouse_internal_ip}"

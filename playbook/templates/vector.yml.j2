@@ -1,0 +1,31 @@
+data_dir: {{ vector_data_dir }}
+
+sources:
+  demo_logs:
+    type: demo_logs
+    format: syslog
+    interval: 1
+
+transforms:
+  parse_logs:
+    type: remap
+    inputs: ["demo_logs"]
+    source: |
+      . = parse_syslog!(.message)
+
+sinks:
+  output_console:
+    type: console
+    inputs: ["parse_logs"]
+    encoding:
+      codec: json
+
+  clickhouse_sink:
+    type: clickhouse
+    inputs: ["parse_logs"]
+    endpoint: "http://{{ clickhouse_host }}:8123"
+    database: "logs"
+    table: "vector_logs"
+    compression: gzip
+    healthcheck: true
+    skip_unknown_fields: true
