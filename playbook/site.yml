@@ -2,6 +2,9 @@
 - name: Install Clickhouse
   hosts: clickhouse
   become: true
+  tags:
+    - clickhouse
+    - database
   handlers:
     - name: Start clickhouse service
       ansible.builtin.systemd:
@@ -14,6 +17,9 @@
         name:
           - wget
         state: present
+      tags:
+        - packages
+        - deps
 
     - name: Download ClickHouse RPMs
       ansible.builtin.shell: |
@@ -23,6 +29,9 @@
         wget -q https://packages.clickhouse.com/rpm/lts/clickhouse-server-{{ clickhouse_version }}.x86_64.rpm
       args:
         creates: /tmp/clickhouse-server-{{ clickhouse_version }}.x86_64.rpm
+      tags:
+        - packages
+        - download
 
     - name: Install clickhouse RPMs
       ansible.builtin.dnf:
@@ -33,9 +42,14 @@
         state: present
         disable_gpg_check: true
       notify: Start clickhouse service
+      tags:
+        - packages
+        - install
 
     - name: Flush handlers
       ansible.builtin.meta: flush_handlers
+      tags:
+        - always
 
     - name: Configure ClickHouse to listen on all interfaces
       ansible.builtin.replace:
@@ -43,9 +57,14 @@
         regexp: '<!-- <listen_host>0\.0\.0\.0</listen_host> -->'
         replace: '<listen_host>0.0.0.0</listen_host>'
       notify: Start clickhouse service
+      tags:
+        - config
+        - clickhouse-config
 
     - name: Flush handlers
       ansible.builtin.meta: flush_handlers
+      tags:
+        - always
 
     - name: Wait for ClickHouse to start
       ansible.builtin.wait_for:
@@ -53,12 +72,16 @@
         host: localhost
         delay: 5
         timeout: 30
+      tags:
+        - always
 
     - name: Check if logs database exists
       ansible.builtin.command: "clickhouse-client -q 'EXISTS DATABASE logs;'"
       register: db_exists
       changed_when: false
       failed_when: false
+      tags:
+        - database
 
     - name: Create logs database in ClickHouse
       ansible.builtin.command: "clickhouse-client -q 'create database logs;'"
@@ -66,12 +89,17 @@
       failed_when: create_db.rc != 0 and create_db.rc != 82
       changed_when: create_db.rc == 0
       when: db_exists.stdout == "0"
+      tags:
+        - database
 
     - name: Check if vector_logs table exists
       ansible.builtin.command: "clickhouse-client -q 'EXISTS TABLE logs.vector_logs;'"
       register: table_exists
       changed_when: false
       failed_when: false
+      tags:
+        - database
+        - table
 
     - name: Create vector_logs table in ClickHouse
       ansible.builtin.command: "clickhouse-client -q 'CREATE TABLE logs.vector_logs (appname String, facility String, hostname String, message String, msgid String, procid String, severity String, timestamp DateTime, version String) ENGINE = MergeTree() ORDER BY timestamp;'"
@@ -79,10 +107,16 @@
       failed_when: create_table.rc != 0
       changed_when: create_table.rc == 0
       when: table_exists.stdout == "0"
+      tags:
+        - database
+        - table
 
 - name: Install Vector
   hosts: vector
   become: true
+  tags:
+    - vector
+    - monitoring
   handlers:
     - name: Restart vector service
       ansible.builtin.systemd:
@@ -99,18 +133,24 @@
         - "{{ vector_install_dir }}/bin"
         - "{{ vector_config_dir }}"
         - "{{ vector_data_dir }}"
+      tags:
+        - directories
 
     - name: Download Vector distribution
       ansible.builtin.get_url:
         url: "https://packages.timber.io/vector/{{ vector_version }}/vector-{{ vector_version }}-{{ ansible_architecture }}-unknown-linux-gnu.tar.gz"
         dest: "/tmp/vector-{{ vector_version }}.tar.gz"
         mode: '0644'
+      tags:
+        - download
 
     - name: Extract Vector archive
       ansible.builtin.unarchive:
         src: "/tmp/vector-{{ vector_version }}.tar.gz"
         dest: /tmp/
         remote_src: true
+      tags:
+        - install
 
     - name: Find vector binary
       ansible.builtin.find:
@@ -119,6 +159,8 @@
         file_type: file
         recurse: true
       register: vector_bin_found
+      tags:
+        - install
 
     - name: Copy vector binary to install dir
       ansible.builtin.copy:
@@ -126,6 +168,8 @@
         dest: "{{ vector_install_dir }}/bin/vector"
         mode: '0755'
         remote_src: true
+      tags:
+        - install
 
     - name: Create symbolic link for convenience
       ansible.builtin.file:
@@ -133,6 +177,8 @@
         dest: "/usr/local/bin/vector"
         state: link
         force: true
+      tags:
+        - install
 
     - name: Deploy Vector configuration
       ansible.builtin.template:
@@ -140,6 +186,9 @@
         dest: "{{ vector_config_dir }}/vector.yml"
         mode: '0644'
       notify: Restart vector service
+      tags:
+        - config
+        - vector-config
 
     - name: Create Vector systemd service file
       ansible.builtin.template:
@@ -147,9 +196,14 @@
         dest: /etc/systemd/system/vector.service
         mode: '0644'
       notify: Restart vector service
+      tags:
+        - config
+        - service
 
     - name: Start and enable Vector service
       ansible.builtin.systemd:
         name: vector
         state: started
         enabled: true
+      tags:
+        - service

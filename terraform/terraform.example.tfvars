@@ -1,0 +1,13 @@
+cloud_id                 = "b1g"
+folder_id                = "b1g"
+zone                     = "ru-central1-a"
+subnet_id                = "e9b"
+security_group_id        = "enp"
+service_account_key_file = "/home/.authorized_key.json"
+public_key_path          = "/home/.ssh/key.pub"
+platform_id              = "standard-v2"
+cores                    = 2
+memory                   = 2
+core_fraction            = 20
+disk_size                = 10
+preemptible              = true
