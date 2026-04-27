@@ -37,6 +37,16 @@
     - name: Flush handlers
       ansible.builtin.meta: flush_handlers
 
+    - name: Configure ClickHouse to listen on all interfaces
+      ansible.builtin.replace:
+        path: /etc/clickhouse-server/config.xml
+        regexp: '<!-- <listen_host>0\.0\.0\.0</listen_host> -->'
+        replace: '<listen_host>0.0.0.0</listen_host>'
+      notify: Start clickhouse service
+
+    - name: Flush handlers
+      ansible.builtin.meta: flush_handlers
+
     - name: Wait for ClickHouse to start
       ansible.builtin.wait_for:
         port: 9000
@@ -56,6 +66,19 @@
       failed_when: create_db.rc != 0 and create_db.rc != 82
       changed_when: create_db.rc == 0
       when: db_exists.stdout == "0"
+
+    - name: Check if vector_logs table exists
+      ansible.builtin.command: "clickhouse-client -q 'EXISTS TABLE logs.vector_logs;'"
+      register: table_exists
+      changed_when: false
+      failed_when: false
+
+    - name: Create vector_logs table in ClickHouse
+      ansible.builtin.command: "clickhouse-client -q 'CREATE TABLE logs.vector_logs (appname String, facility String, hostname String, message String, msgid String, procid String, severity String, timestamp DateTime, version String) ENGINE = MergeTree() ORDER BY timestamp;'"
+      register: create_table
+      failed_when: create_table.rc != 0
+      changed_when: create_table.rc == 0
+      when: table_exists.stdout == "0"
 
 - name: Install Vector
   hosts: vector
