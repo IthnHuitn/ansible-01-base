@@ -27,11 +27,11 @@
 
 ### 1. `Значение some_fact для localhost = 12`
 
-![ansible1-1](https://github.com/IthnHuitn/ansible-01-base/blob/main/screens/ansible1-1.png)
+![ansible1-1](https://github.com/IthnHuitn/ansible-01-base/blob/master/screens/ansible1-1.png)
 
 ### 2. `Изменение переменной в group_vars/all`
 
-![ansible1-2](https://github.com/IthnHuitn/ansible-01-base/blob/main/screens/ansible1-2.png)
+![ansible1-2](https://github.com/IthnHuitn/ansible-01-base/blob/master/screens/ansible1-2.png)
 
 ### 3-4. `Запуск на prod.yml с Docker`
 - centos7: `el`
@@ -44,7 +44,7 @@
 ### 7-8. `Шифрование с помощью ansible-vault`
 Файлы `group_vars/deb/examp.yml` и `group_vars/el/examp.yml` зашифрованы паролем `netology`
 
-![ansible1-3](https://github.com/IthnHuitn/ansible-01-base/blob/main/screens/ansible1-3.png)
+![ansible1-3](https://github.com/IthnHuitn/ansible-01-base/blob/master/screens/ansible1-3.png)
 
 ### 9. `Плагины подключения`
 Для control node подходит плагин `local`
@@ -56,7 +56,7 @@
 - ubuntu: `deb default fact`  
 - localhost: `all default fact`
 
-![ansible1-4](https://github.com/IthnHuitn/ansible-01-base/blob/main/screens/ansible1-4.png)
+![ansible1-4](https://github.com/IthnHuitn/ansible-01-base/blob/master/screens/ansible1-4.png)
 
 ---
 
@@ -65,7 +65,7 @@
 
 ### 1-3 `Передача зашифрованного значения PaSSw0rd для нужных хостов`
 
-![ansible1-5](https://github.com/IthnHuitn/ansible-01-base/blob/main/screens/ansible1-5.png)
-![ansible1-6](https://github.com/IthnHuitn/ansible-01-base/blob/main/screens/ansible1-6.png)
+![ansible1-5](https://github.com/IthnHuitn/ansible-01-base/blob/master/screens/ansible1-5.png)
+![ansible1-6](https://github.com/IthnHuitn/ansible-01-base/blob/master/screens/ansible1-6.png)
 
 
