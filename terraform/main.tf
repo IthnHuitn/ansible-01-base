@@ -44,7 +44,7 @@ resource "yandex_compute_instance" "clickhouse" {
   }
 
   metadata = {
-    ssh-keys = "almalinux:${file(var.public_key_path)}"
+    ssh-keys = "cloud-user:${file(var.public_key_path)}"
   }
 
   scheduling_policy {
@@ -55,6 +55,40 @@ resource "yandex_compute_instance" "clickhouse" {
 resource "yandex_compute_instance" "vector" {
   name        = "vector-01"
   hostname    = "vector-01"
+  platform_id = var.platform_id
+  zone        = var.zone
+
+  resources {
+    cores         = var.cores
+    memory        = var.memory
+    core_fraction = var.core_fraction
+  }
+
+  boot_disk {
+    initialize_params {
+      image_id = data.yandex_compute_image.almalinux.id
+      size     = var.disk_size
+    }
+  }
+
+  network_interface {
+    subnet_id          = var.subnet_id
+    nat                = true
+    security_group_ids = [var.security_group_id]
+  }
+
+  metadata = {
+    ssh-keys = "cloud-user:${file(var.public_key_path)}"
+  }
+
+  scheduling_policy {
+    preemptible = var.preemptible
+  }
+}
+
+resource "yandex_compute_instance" "lighthouse" {
+  name        = "lighthouse-01"
+  hostname    = "lighthouse-01"
   platform_id = var.platform_id
   zone        = var.zone
 
