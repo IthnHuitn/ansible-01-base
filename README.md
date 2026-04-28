@@ -18,6 +18,7 @@ Playbook автоматизирует установку и настройку:
 
 ## Структура проекта
 
+```text
 ansible-03-yandex/
 ├── terraform/ # Terraform для Yandex Cloud
 │ ├── main.tf # Конфигурация 3 ВМ
@@ -38,7 +39,7 @@ ansible-03-yandex/
 │ └── site.yml # Основной playbook
 ├── .gitignore
 └── README.md
-
+```
 
 ## Требования
 
