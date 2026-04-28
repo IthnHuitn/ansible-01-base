@@ -169,3 +169,6 @@ curl -s -o /dev/null -w "%{http_code}" http://<LIGHTHOUSE_IP>
 ![LightHouse](https://github.com/IthnHuitn/ansible-01-base/blob/ansible-03/screens/ansible1-4.png)
 
 ---
+
+### Ссылка на тег
+[Tag](https://github.com/IthnHuitn/ansible-01-base/releases/tag/08-ansible-03-yandex) 
